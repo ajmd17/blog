@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gaming On Your Toaster - Andrew MacDonald</title>
+  <meta name="description" content="A journey into the madness that is porting a custom game engine to mobile devices.">
+  <meta property="og:title" content="Gaming On Your Toaster">
+  <meta property="og:description" content="A journey into the madness that is porting a custom game engine to mobile devices.">
+  <meta property="og:url" content="https://ajmd.dev/blog/p/gaming-on-your-toaster.html">
+  <meta property="og:type" content="article">
+  <link rel="canonical" href="https://ajmd.dev/blog/p/gaming-on-your-toaster.html">
+  <style>*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.7;
+  color: #1a1a1a;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  background: #fff;
+}
+
+nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0 0 1rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 0.9rem;
+}
+
+nav a {
+  color: #333;
+  text-decoration: none;
+}
+
+nav a:hover {
+  text-decoration: underline;
+}
+
+nav .title-group h1 {
+  margin: 0 0 5px;
+  font-size: 1.3rem;
+}
+nav .title-group h4 {
+  margin: 0 0 8px;
+  font-weight: normal;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.nav-sep {
+  color: #999;
+  margin: 0 0.4rem;
+}
+
+.nav-current {
+  color: #666;
+}
+
+.nav-link {
+  color: #fff;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  padding: 4px 12px;
+  background: #599ac0;
+  border-radius: 6px;
+  border: 1px solid #58a8d7;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  text-decoration: none;
+}
+
+.nav-link:hover {
+  background: #6aa3c7;
+  border-color: #5a93b7;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+  text-decoration: none;
+}
+
+h1, h2, h3, h4 {
+  line-height: 1.3;
+}
+
+main > h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 1.5rem;
+  color: #333;
+}
+
+article {
+  margin-bottom: 2.5rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid #eee;
+}
+
+article:last-child {
+  border-bottom: none;
+}
+
+article h2 {
+  margin: 0 0 0.2rem;
+  font-size: 1.4rem;
+}
+
+article h2 a {
+  color: #1a1a1a;
+  text-decoration: none;
+}
+
+article h2 a:hover {
+  color: #0066cc;
+}
+
+time {
+  display: block;
+  color: #888;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.preview p {
+  margin: 0.5rem 0;
+}
+
+.read-more {
+  display: inline-block;
+  margin-top: 0.4rem;
+  color: #0066cc;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.read-more:hover {
+  text-decoration: underline;
+}
+
+/* Full article view */
+.full-article h1 {
+  margin: 0 0 0.2rem;
+  font-size: 1.8rem;
+}
+
+.full-article .content > h6:first-child {
+  font-size: 0.95rem;
+  font-weight: normal;
+  color: #666;
+  margin: 0 0 1rem;
+  line-height: 1.4;
+}
+
+.full-article .content p {
+  margin: 1rem 0;
+}
+
+.full-article .content h2 {
+  margin-top: 2rem;
+}
+
+.full-article .content h3 {
+  margin-top: 1.5rem;
+}
+
+.full-article .content img {
+  max-width: 100%;
+  height: auto;
+}
+
+.full-article .content pre {
+  background: #f5f5f5;
+  padding: 1rem;
+  overflow-x: auto;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.full-article .content code {
+  background: #f0f0f0;
+  padding: 0.125rem 0.3rem;
+  border-radius: 2px;
+  font-size: 0.9em;
+}
+
+.full-article .content pre code {
+  background: none;
+  padding: 0;
+}
+
+.full-article .content blockquote {
+  margin: 1rem 0;
+  padding: 0 1rem;
+  border-left: 3px solid #ccc;
+  color: #555;
+}
+
+.full-article .content ul, .full-article .content ol {
+  padding-left: 1.5rem;
+}
+
+.full-article .content a {
+  color: #0066cc;
+}
+
+@media (max-width: 500px) {
+  body {
+    padding: 1rem;
+  }
+  article h2 {
+    font-size: 1.2rem;
+  }
+  .full-article h1 {
+    font-size: 1.4rem;
+  }
+}
+</style>
+</head>
+<body>
+  <nav>
+    <div class="title-group">
+      <h1>Andrew MacDonald's Devlog</h1>
+      <h4>Where dreams go to die</h4>
+    </div>
+    <a href="/blog/" class="nav-link">Back to blog</a>
+  </nav>
+  <main class="full-article">
+    <article>
+      <h1>Gaming On Your Toaster</h1>
+      <time>July 5, 2026</time>
+      <div class="content"><h6 id="this-isnt-a-post-about-toasters-but-the-analogy-will-do">(This isn&#39;t a post about toasters. But the analogy will do)</h6>
+<p>What&#39;s all of this <em>custom game engine development</em> work for, if not to be able to run the same Sponza test scene I&#39;ve been using for the last ten (10?!?!?) years on every possible device I can properly get my hands on?</p>
+<p>Seeing as getting access to a Switch 2 or PS devkit, is currently proving to be a difficult task (for my own personal usage, at least), I&#39;ve decided to make the ultimate sacrifice - port Hyperion to mobile. What must I sacrifice, you ask? My sanity.</p>
+<hr>
+<p>In my day-to-day, I&#39;ve encountered some really frustrating-to-deal-with driver-specific issues and nuances on Android devices. Maybe the device crashes at some point if you&#39;re using vkFreeDescriptorSets(), forcing you to rework the renderer to opt for a more arena-like approach with vkResetDescriptorPool instead. Maybe, the next version of the phone moves from a Mali chip to PowerVR, and suddenly, any ASTC 3D texture (ASTC) you load into GPU memory loads the blocks into incorrect regions of the texture&#39;s memory. In that case, you&#39;ll need to either:</p>
+<p>a) decompress the ASTC in software and initialize the texture as something like RGBA8 UNORM, forcing you to increase startup times and forfeiting the savings you budgeted for when using ASTC for (typically quite large) volumetric textures.</p>
+<p>b) use 2D texture arrays and load each slice separately. Batteries not included - you&#39;ll need to change all of your shaders to sample 2x for every previous sample you had for the 3D texture, and then lerp between them. Not ideal</p>
+<p>From what I&#39;ve tested, Unity opts for a) - If you try to load an ASTC 3D texture into memory, Unity will decompress on the fly and looking in RenderDoc, you&#39;ll see that texture as RGBA8_UNORM or similar.</p>
+<hr>
+<p>With all of that said, I wanted to see how broken my engine, Hyperion, would be if I ported it to Android. iOS follows close behind.</p>
+<p>Starting with Android: getting the boilerplate set up for event handling, window / Vulkan surface creation etc... wasn&#39;t bad. What <em>was</em> a bit annoying though, was reworking the engine&#39;s asset registry system from using traditional C standard library functions like <code>fread</code>, or POSIX <code>mmap</code> / Win32 <code>MapViewOfFile</code> to working with Android&#39;s AssetManager.</p>
+<p>Once that was out of the way, I was able to load my precompiled shaders, meshes and textures. The main thing I encountered was a much larger number of swapchain images were returned - a total of 8, whereas I&#39;m typically working with 3 on PC. No big deal - I&#39;ve surely handled this properly in my Vulkan backend, right?</p>
+<blockquote>
+<p>Narrator: He did not.</p>
+</blockquote>
+<p>You see, when you are presenting frames in Vulkan, you need two sets of semaphores - used for ensuring images are acquired and presented in the correct order. Without these, images would appear out of order and most likely would become completely corrupt. Not a fun experience.</p>
+<p>The first set of semaphores, we&#39;ll call the <em>image available</em> semaphores (one per image, in my case here, 8), and the second, <em>present</em> semaphores (one per <em>frame in flight</em>). To summarize <em>frame in flight</em> here, you&#39;ll typically see Vulkan and DX12 engines use some constant like <code>MAX_FRAMES_IN_FLIGHT</code> or similar, usually 2 or 3. Having frames in <em>flight</em> means that GPU-accessed data used for drawing the frame are buffered - we can write commands for the GPU to use during frame 1, without any risk of messing with data or commands the GPU is currently using as it finishes up with frame 0.</p>
+<p>The problem: it&#39;s a seemingly common mistake, when building a Vulkan renderer, to set the number of <em>image available</em> semaphore to be the same number as the number of <em>present</em> semaphores.</p>
+<p>This was exactly what my issue was. Of course, it&#39;s partially my fault, but I have seen this same mistake repeated by others a few times, so it seems to be one that tends to trip people up.</p>
+<p>In this case, the issue manifested as a total stall of the rendering after frame #7 had been reached, followed by a series of errors reporting that the Android BLASTBufferQueue (<strong>BBQ</strong> - anyone hungry?) was full.</p>
+<p>Once I figured out what was going on, it was a pretty quick fix. About 20 minutes later and the Sponza scene was visible on my Moto Edge in all its glory! Huzzah!</p>
+<hr>
+<h3 id="apples-to-oranges-or-something">Apples to Oranges... Or something</h3>
+<p>In my quest to make Hyperion-to-go truly ubiquitous, I fired up Xcode on my Macbook and forked my Cocoa system interface to start implementing a UIKit interface for iOS support. I was able to get the engine building and running quickly, but wasn&#39;t prepared to be staring at a pitch black screen on my phone as long as I was until I was able to get something drawing to the metal layer.</p>
+<p>Turns out, my <code>int main() { Hyp_Initialize(); ... }</code> was pretty much useless around these parts of town. That is to say: my main issue was a misunderstanding of the logic flow of a typical iOS application. A bit humbling, but I strive to learn something new every day, so I&#39;ve checked that one off my list.
+The solution was to create an <code>AppDelegate</code> interface that implemented <code>UIResponder</code>, and hand that off to <code>UIApplicationMain</code> to do the work, rather than trying to initialize everything up front in <code>main()</code> in classic C or C++ fashion.</p>
+<p>With that done, we were off the races, driving the flycam around sponza in my demo scene. It looks a bit janky without any baked light, as I built the scene on my Macbook, where I don&#39;t have ray tracing shader support. The screen is showing a bit small too, one thing I haven&#39;t figured out yet, but hey, it&#39;s something at least! Screenshot for proof:</p>
+</div>
+    </article>
+  </main>
+</body>
+</html>
