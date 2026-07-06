@@ -260,7 +260,7 @@ time {
       <time>July 5, 2026</time>
       <div class="content"><h6 id="this-isnt-a-post-about-toasters-but-the-analogy-will-do">(This isn&#39;t a post about toasters. But the analogy will do)</h6>
 <p>What&#39;s all of this <em>custom game engine development</em> work for, if not to be able to run the same Sponza test scene I&#39;ve been using for the last ten (10?!?!?) years on every possible device I can properly get my hands on?</p>
-<p>Seeing as getting access to a Switch 2 or PS devkit, is currently proving to be a difficult task (for my own personal usage, at least), I&#39;ve decided to make the ultimate sacrifice - port Hyperion to mobile. What must I sacrifice, you ask? My sanity.</p>
+<p>Seeing as getting access to a Switch 1/2 or PS dev kit is currently proving to be a difficult task (for my own personal usage, at least), I&#39;ve decided to make the ultimate sacrifice - port Hyperion to mobile. What must I sacrifice, you ask? My sanity.</p>
 <hr>
 <p>In my day-to-day, I&#39;ve encountered some strange driver-specific issues and nuances on Android devices. With that, I wanted to see how broken my own engine, Hyperion, would be if I ported it to Android, fully bracing for chaos.</p>
 <p>Starting with Android: getting the boilerplate set up for event handling, window / Vulkan surface creation etc... wasn&#39;t bad. What <em>was</em> a bit annoying though, was reworking the engine&#39;s asset registry system from using traditional C standard library functions like <code>fread</code>, or POSIX <code>mmap</code> / Win32 <code>MapViewOfFile</code> to working with Android&#39;s AssetManager.</p>
@@ -287,6 +287,7 @@ time {
 The solution was to create an <code>AppDelegate</code> interface that implemented <code>UIResponder</code>, and hand that off to <code>UIApplicationMain</code> to do the work, rather than trying to initialize everything up front in <code>main()</code> in classic C or C++ fashion.</p>
 <p>With that done, we were off the races, driving the flycam around sponza in my demo scene. It looks a bit janky without any baked light, as I built the scene on my Macbook, where I don&#39;t have ray tracing shader support. The screen is showing a bit small too, one thing I haven&#39;t figured out yet, but hey, it&#39;s something at least! Screenshot for proof:</p>
 <p><a href="../img/engine_ios_1.png" target="_blank"><img src="../img/engine_ios_1.png" alt="The Hyperion game engine running on iOS"></a></p>
+<p>Link to Hyperion on GitHub: <a href="https://github.com/HyperionGameTech/HyperionEngine">https://github.com/HyperionGameTech/HyperionEngine</a></p>
 </div>
     </article>
     <div class="back-to-blog-wrapper">
