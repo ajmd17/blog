@@ -9,7 +9,7 @@ description: A journey into the madness that is porting a custom game engine to 
 
 What's all of this _custom game engine development_ work for, if not to be able to run the same Sponza test scene I've been using for the last ten (10?!?!?) years on every possible device I can properly get my hands on?
 
-Seeing as getting access to a Switch 2 or PS devkit, is currently proving to be a difficult task (for my own personal usage, at least), I've decided to make the ultimate sacrifice - port Hyperion to mobile. What must I sacrifice, you ask? My sanity.
+Seeing as getting access to a Switch 1/2 or PS dev kit is currently proving to be a difficult task (for my own personal usage, at least), I've decided to make the ultimate sacrifice - port Hyperion to mobile. What must I sacrifice, you ask? My sanity.
 
 ----
 
