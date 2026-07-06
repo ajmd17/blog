@@ -51,3 +51,4 @@ With that done, we were off the races, driving the flycam around sponza in my de
 
 ![The Hyperion game engine running on iOS](../img/engine_ios_1.png)
 
+Link to Hyperion on GitHub: https://github.com/HyperionGameTech/HyperionEngine
