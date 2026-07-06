@@ -13,18 +13,7 @@ Seeing as getting access to a Switch 2 or PS devkit, is currently proving to be 
 
 ----
 
-In my day-to-day, I've encountered some really frustrating-to-deal-with driver-specific issues and nuances on Android devices. Maybe the device crashes at some point if you're using `vkFreeDescriptorSets()`, forcing you to rework the renderer to opt for a more arena-like approach with `vkResetDescriptorPool()` instead. Maybe, the next version of the phone moves from a Mali chip to PowerVR, and suddenly, any ASTC-compressed 3D texture you load into GPU memory loads the blocks into incorrect regions of the texture's memory. In that case, you'll need to either:
-
-a) decompress the ASTC in software and initialize the texture as something like RGBA8 UNORM, forcing you to increase startup times and forfeiting the savings you budgeted for when using ASTC for volumetric textures which are typically relatively large, compred to run-of-the-mill standard 2D textures.
-
-b) use 2D texture arrays and load each slice separately. Batteries not included - you'll need to change all of your shaders to sample 2x for every previous sample you had for the 3D texture, and then lerp between them. Not ideal
-
-From what I've tested, Unity opts for **a)**: If you try to load an ASTC 3D texture into memory, Unity will decompress on the fly and looking in RenderDoc, you'll see that texture as RGBA8_UNORM or similar.
-
------
-
-With all of that said, I wanted to see how broken my engine, Hyperion, would be if I ported it to Android. iOS follows close behind.
-
+In my day-to-day, I've encountered some strange driver-specific issues and nuances on Android devices. With that, I wanted to see how broken my own engine, Hyperion, would be if I ported it to Android, fully bracing for chaos.
 
 Starting with Android: getting the boilerplate set up for event handling, window / Vulkan surface creation etc... wasn't bad. What _was_ a bit annoying though, was reworking the engine's asset registry system from using traditional C standard library functions like `fread`, or POSIX `mmap` / Win32 `MapViewOfFile` to working with Android's AssetManager.
 
@@ -34,7 +23,8 @@ Once that was out of the way, I was able to load my precompiled shaders, meshes 
 
 You see, when you are presenting frames in Vulkan, you need two sets of semaphores - used for ensuring images are acquired and presented in the correct order. Without these, images would appear out of order and most likely would become completely corrupt. Not a fun experience.
 
-The first set of semaphores, we'll call the _image available_ semaphores (one per image, in my case here, 8), and the second, _present_ semaphores (one per _frame in flight_). To summarize _frame in flight_ here, you'll typically see Vulkan and DX12 engines use some constant like `MAX_FRAMES_IN_FLIGHT` or similar, usually 2 or 3. Having frames in _flight_ means that GPU-accessed data used for drawing the frame are buffered - we can write commands for the GPU to use during frame 1, without any risk of messing with data or commands the GPU is currently using as it finishes up with frame 0.
+The first set of semaphores, we'll call the _image available_ semaphores (one per image, in my case here, 8), and the second, _present_ semaphores (one per _frame in flight_).
+> Having some number of frames in _flight_ means that GPU-accessed data used for drawing the frame is buffered - we can write commands for the GPU to use during frame 1, without any risk of messing with data or commands the GPU is currently using as it finishes up with frame 0. You'll typically see Vulkan and DX12 engines use some constant like `MAX_FRAMES_IN_FLIGHT` or similar, usually set to 2 or 3.
 
 The problem: it's a seemingly common mistake, when building a Vulkan renderer, to set the number of _image available_ semaphore to be the same number as the number of _present_ semaphores.
 
