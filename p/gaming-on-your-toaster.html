@@ -93,27 +93,44 @@ main > h1 {
   color: #333;
 }
 
-article {
+.article-card {
+  display: block;
+  color: inherit;
+  text-decoration: none;
   margin-bottom: 2.5rem;
   padding-bottom: 2rem;
   border-bottom: 1px solid #eee;
+  transition: opacity 0.15s;
 }
 
-article:last-child {
+.article-card:hover {
+  opacity: 0.8;
+}
+
+.article-card article {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.article-card article h2 {
+  margin: 0 0 0.2rem;
+  font-size: 1.4rem;
+  color: #1a1a1a;
+}
+
+.article-card:last-child {
   border-bottom: none;
 }
 
-article h2 {
-  margin: 0 0 0.2rem;
-  font-size: 1.4rem;
+.read-more {
+  display: inline-block;
+  margin-top: 0.5rem;
+  color: #7eb8da;
+  font-size: 0.85rem;
 }
 
-article h2 a {
-  color: #1a1a1a;
-  text-decoration: none;
-}
-
-article h2 a:hover {
+.article-card:hover .read-more {
   color: #0066cc;
 }
 
@@ -128,19 +145,12 @@ time {
   margin: 0.5rem 0;
 }
 
-.read-more {
-  display: inline-block;
-  margin-top: 0.4rem;
-  color: #0066cc;
-  text-decoration: none;
-  font-size: 0.9rem;
-}
-
-.read-more:hover {
-  text-decoration: underline;
-}
-
 /* Full article view */
+
+.full-article .back-to-blog-wrapper {
+  text-align: center;
+  margin: 2.5rem 0 1rem;
+}
 .full-article h1 {
   margin: 0 0 0.2rem;
   font-size: 1.8rem;
@@ -166,9 +176,25 @@ time {
   margin-top: 1.5rem;
 }
 
+.full-article .content a:has(img) {
+  display: block;
+  text-decoration: none;
+}
+
+.full-article .content a:has(img):hover img {
+  opacity: 0.85;
+}
+
 .full-article .content img {
   max-width: 100%;
+  max-height: 550px;
   height: auto;
+  width: auto;
+  display: block;
+  margin: 1.5rem auto;
+  border-radius: 4px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.15);
+  transition: opacity 0.15s;
 }
 
 .full-article .content pre {
@@ -220,13 +246,14 @@ time {
 </style>
 </head>
 <body>
-  <nav>
+    <nav>
     <div class="title-group">
-      <h1>Andrew MacDonald's Devlog</h1>
-      <h4>Where dreams go to die</h4>
+      <h1>Life in the Fast Lane</h1>
+      <h4>Graphics Programming and Other Goodness</h4>
     </div>
     <a href="/blog/" class="nav-link">Back to blog</a>
   </nav>
+
   <main class="full-article">
     <article>
       <h1>Gaming On Your Toaster</h1>
@@ -235,10 +262,10 @@ time {
 <p>What&#39;s all of this <em>custom game engine development</em> work for, if not to be able to run the same Sponza test scene I&#39;ve been using for the last ten (10?!?!?) years on every possible device I can properly get my hands on?</p>
 <p>Seeing as getting access to a Switch 2 or PS devkit, is currently proving to be a difficult task (for my own personal usage, at least), I&#39;ve decided to make the ultimate sacrifice - port Hyperion to mobile. What must I sacrifice, you ask? My sanity.</p>
 <hr>
-<p>In my day-to-day, I&#39;ve encountered some really frustrating-to-deal-with driver-specific issues and nuances on Android devices. Maybe the device crashes at some point if you&#39;re using vkFreeDescriptorSets(), forcing you to rework the renderer to opt for a more arena-like approach with vkResetDescriptorPool instead. Maybe, the next version of the phone moves from a Mali chip to PowerVR, and suddenly, any ASTC 3D texture (ASTC) you load into GPU memory loads the blocks into incorrect regions of the texture&#39;s memory. In that case, you&#39;ll need to either:</p>
-<p>a) decompress the ASTC in software and initialize the texture as something like RGBA8 UNORM, forcing you to increase startup times and forfeiting the savings you budgeted for when using ASTC for (typically quite large) volumetric textures.</p>
+<p>In my day-to-day, I&#39;ve encountered some really frustrating-to-deal-with driver-specific issues and nuances on Android devices. Maybe the device crashes at some point if you&#39;re using <code>vkFreeDescriptorSets()</code>, forcing you to rework the renderer to opt for a more arena-like approach with <code>vkResetDescriptorPool()</code> instead. Maybe, the next version of the phone moves from a Mali chip to PowerVR, and suddenly, any ASTC-compressed 3D texture you load into GPU memory loads the blocks into incorrect regions of the texture&#39;s memory. In that case, you&#39;ll need to either:</p>
+<p>a) decompress the ASTC in software and initialize the texture as something like RGBA8 UNORM, forcing you to increase startup times and forfeiting the savings you budgeted for when using ASTC for volumetric textures which are typically relatively large, compred to run-of-the-mill standard 2D textures.</p>
 <p>b) use 2D texture arrays and load each slice separately. Batteries not included - you&#39;ll need to change all of your shaders to sample 2x for every previous sample you had for the 3D texture, and then lerp between them. Not ideal</p>
-<p>From what I&#39;ve tested, Unity opts for a) - If you try to load an ASTC 3D texture into memory, Unity will decompress on the fly and looking in RenderDoc, you&#39;ll see that texture as RGBA8_UNORM or similar.</p>
+<p>From what I&#39;ve tested, Unity opts for <strong>a)</strong>: If you try to load an ASTC 3D texture into memory, Unity will decompress on the fly and looking in RenderDoc, you&#39;ll see that texture as RGBA8_UNORM or similar.</p>
 <hr>
 <p>With all of that said, I wanted to see how broken my engine, Hyperion, would be if I ported it to Android. iOS follows close behind.</p>
 <p>Starting with Android: getting the boilerplate set up for event handling, window / Vulkan surface creation etc... wasn&#39;t bad. What <em>was</em> a bit annoying though, was reworking the engine&#39;s asset registry system from using traditional C standard library functions like <code>fread</code>, or POSIX <code>mmap</code> / Win32 <code>MapViewOfFile</code> to working with Android&#39;s AssetManager.</p>
@@ -252,14 +279,21 @@ time {
 <p>This was exactly what my issue was. Of course, it&#39;s partially my fault, but I have seen this same mistake repeated by others a few times, so it seems to be one that tends to trip people up.</p>
 <p>In this case, the issue manifested as a total stall of the rendering after frame #7 had been reached, followed by a series of errors reporting that the Android BLASTBufferQueue (<strong>BBQ</strong> - anyone hungry?) was full.</p>
 <p>Once I figured out what was going on, it was a pretty quick fix. About 20 minutes later and the Sponza scene was visible on my Moto Edge in all its glory! Huzzah!</p>
+<p><a href="../img/engine_android_1.jpeg" target="_blank"><img src="../img/engine_android_1.jpeg" alt="The Hyperion game engine running on Android (Motorola Edge 2025)"></a></p>
+<p>(Sky ambient light isn&#39;t working here for some reason or another. But that should be a pretty quick fix.)</p>
+<!-- ![Hyperion running on Android (portrait)](../img/engine_android_2.jpeg) -->
 <hr>
 <h3 id="apples-to-oranges-or-something">Apples to Oranges... Or something</h3>
 <p>In my quest to make Hyperion-to-go truly ubiquitous, I fired up Xcode on my Macbook and forked my Cocoa system interface to start implementing a UIKit interface for iOS support. I was able to get the engine building and running quickly, but wasn&#39;t prepared to be staring at a pitch black screen on my phone as long as I was until I was able to get something drawing to the metal layer.</p>
 <p>Turns out, my <code>int main() { Hyp_Initialize(); ... }</code> was pretty much useless around these parts of town. That is to say: my main issue was a misunderstanding of the logic flow of a typical iOS application. A bit humbling, but I strive to learn something new every day, so I&#39;ve checked that one off my list.
 The solution was to create an <code>AppDelegate</code> interface that implemented <code>UIResponder</code>, and hand that off to <code>UIApplicationMain</code> to do the work, rather than trying to initialize everything up front in <code>main()</code> in classic C or C++ fashion.</p>
 <p>With that done, we were off the races, driving the flycam around sponza in my demo scene. It looks a bit janky without any baked light, as I built the scene on my Macbook, where I don&#39;t have ray tracing shader support. The screen is showing a bit small too, one thing I haven&#39;t figured out yet, but hey, it&#39;s something at least! Screenshot for proof:</p>
+<p><a href="../img/engine_ios_1.png" target="_blank"><img src="../img/engine_ios_1.png" alt="The Hyperion game engine running on iOS"></a></p>
 </div>
     </article>
+    <div class="back-to-blog-wrapper">
+      <a href="/blog/" class="nav-link">Back to blog</a>
+    </div>
   </main>
 </body>
 </html>

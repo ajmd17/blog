@@ -1,3 +1,6 @@
+/// Generator for the blog
+/// This takes in markdown files and generates static html.
+
 var fs = require('fs');
 var path = require('path');
 
@@ -40,6 +43,11 @@ function getPreview(html) {
   return p.slice(0, 2).join('');
 }
 
+function wrapImages(html) {
+  return html.replace(/<img src="([^"]+)" alt="([^"]*)"(.*?)>/g,
+    '<a href="$1" target="_blank"><img src="$1" alt="$2"$3></a>');
+}
+
 function formatDate(str) {
   if (!str) return '';
   var parts = str.split('-');
@@ -69,44 +77,25 @@ function slugHref(slug) {
 
 function generateArticleHtml(a) {
   var href = slugHref(a.slug);
-  return '<article>' +
-    '<h2><a href="' + href + '">' + esc(a.title) + '</a></h2>' +
+  return '<a href="' + href + '" class="article-card">' +
+    '<article>' +
+    '<h2>' + esc(a.title) + '</h2>' +
     (a.date ? '<time>' + formatDate(a.date) + '</time>' : '') +
     '<div class="preview">' + a.preview + '</div>' +
-    '<a href="' + href + '" class="read-more">Read more</a>' +
-    '</article>';
+    '<span class="read-more">Read more</span>' +
+    '</article></a>';
 }
 
-function generateStaticPage(a, css) {
+function generateStaticPage(a, css, template) {
   var desc = a.description || stripHtml(a.preview).slice(0, 160);
-  var href = slugHref(a.slug);
-  var url = baseUrl + '/' + href;
-  return '<!doctype html>\n<html lang="en">\n<head>\n' +
-    '  <meta charset="utf-8">\n' +
-    '  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
-    '  <title>' + esc(a.title) + ' - Andrew MacDonald</title>\n' +
-    '  <meta name="description" content="' + esc(desc) + '">\n' +
-    '  <meta property="og:title" content="' + esc(a.title) + '">\n' +
-    '  <meta property="og:description" content="' + esc(desc) + '">\n' +
-    '  <meta property="og:url" content="' + url + '">\n' +
-    '  <meta property="og:type" content="article">\n' +
-    '  <link rel="canonical" href="' + url + '">\n' +
-    '  <style>' + css + '</style>\n' +
-    '</head>\n<body>\n' +
-    '  <nav>\n' +
-    '    <div class="title-group">\n' +
-    '      <h1>Andrew MacDonald\'s Devlog</h1>\n' +
-    '      <h4>Where dreams go to die</h4>\n' +
-    '    </div>\n' +
-    '    <a href="/blog/" class="nav-link">Back to blog</a>\n' +
-    '  </nav>\n' +
-    '  <main class="full-article">\n' +
-    '    <article>\n' +
-    '      <h1>' + esc(a.title) + '</h1>\n' +
-    (a.date ? '      <time>' + formatDate(a.date) + '</time>\n' : '') +
-    '      <div class="content">' + a.content + '</div>\n' +
-    '    </article>\n' +
-    '  </main>\n</body>\n</html>';
+  var url = baseUrl + '/' + slugHref(a.slug);
+  return template
+    .replace(/<!-- TITLE -->/g, esc(a.title))
+    .replace(/<!-- DESCRIPTION -->/g, esc(desc))
+    .replace(/<!-- URL -->/g, url)
+    .replace(/<!-- CSS -->/g, css)
+    .replace(/<!-- DATE -->/g, a.date ? '<time>' + formatDate(a.date) + '</time>' : '')
+    .replace(/<!-- CONTENT -->/g, a.content);
 }
 
 function generateSitemap(articles) {
@@ -136,12 +125,11 @@ if (files.length === 0) {
   process.exit(0);
 }
 
-// --- parse ---
 var articles = [];
 files.forEach(function (file) {
   var raw = fs.readFileSync(path.join(articlesDir, file), 'utf-8');
   var p = parseFrontmatter(raw);
-  var html = marked.parse(p.content);
+  var html = wrapImages(marked.parse(p.content));
   articles.push({
     slug: p.data.slug || file.replace(/\.md$/, ''),
     title: p.data.title || 'Untitled',
@@ -158,29 +146,44 @@ articles.sort(function (a, b) {
   return new Date(b.date) - new Date(a.date);
 });
 
-// --- generate index.html from template ---
 if (!fs.existsSync(templateFile)) {
   console.log('Error: ' + templateFile + ' not found.');
   process.exit(1);
 }
-var template = fs.readFileSync(templateFile, 'utf-8');
+
+var navTemplateFile = path.join(__dirname, 'nav.template.html');
+var navTemplate = fs.readFileSync(navTemplateFile, 'utf-8');
+
+function resolveNav(href, text) {
+  return navTemplate
+    .replace(/<!-- NAV_LINK_HREF -->/g, href)
+    .replace(/<!-- NAV_LINK_TEXT -->/g, text);
+}
+
+var template = fs.readFileSync(templateFile, 'utf-8')
+  .replace('<!-- NAV -->', resolveNav('/', 'Andrew\'s Portfolio'));
 var listHtml = articles.map(generateArticleHtml).join('\n');
 var indexHtml = template.replace('<!-- ARTICLES -->', listHtml);
+
 fs.writeFileSync(indexPath, indexHtml, 'utf-8');
 console.log('Generated index.html (' + articles.length + ' articles)');
 
-// --- generate static p/ pages ---
 var css = '';
 try { css = fs.readFileSync(cssPath, 'utf-8'); } catch (e) {}
+
+var articleTemplateFile = path.join(__dirname, 'article.template.html');
+var articleTemplate = fs.readFileSync(articleTemplateFile, 'utf-8')
+  .replace('<!-- NAV -->', resolveNav('/blog/', 'Back to blog'));
+
 if (!fs.existsSync(pagesDir)) fs.mkdirSync(pagesDir, { recursive: true });
 
 articles.forEach(function (a) {
-  var html = generateStaticPage(a, css);
+  var html = generateStaticPage(a, css, articleTemplate);
   fs.writeFileSync(path.join(pagesDir, a.slug + '.html'), html, 'utf-8');
   console.log('  Generated p/' + a.slug + '.html');
 });
 
-// --- generate sitemap ---
+// sitemap
 fs.writeFileSync(sitemapFile, generateSitemap(articles), 'utf-8');
 console.log('Generated sitemap.xml');
 console.log('Done!');

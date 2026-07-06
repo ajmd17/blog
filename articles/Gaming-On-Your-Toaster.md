@@ -13,13 +13,13 @@ Seeing as getting access to a Switch 2 or PS devkit, is currently proving to be 
 
 ----
 
-In my day-to-day, I've encountered some really frustrating-to-deal-with driver-specific issues and nuances on Android devices. Maybe the device crashes at some point if you're using vkFreeDescriptorSets(), forcing you to rework the renderer to opt for a more arena-like approach with vkResetDescriptorPool instead. Maybe, the next version of the phone moves from a Mali chip to PowerVR, and suddenly, any ASTC 3D texture (ASTC) you load into GPU memory loads the blocks into incorrect regions of the texture's memory. In that case, you'll need to either:
+In my day-to-day, I've encountered some really frustrating-to-deal-with driver-specific issues and nuances on Android devices. Maybe the device crashes at some point if you're using `vkFreeDescriptorSets()`, forcing you to rework the renderer to opt for a more arena-like approach with `vkResetDescriptorPool()` instead. Maybe, the next version of the phone moves from a Mali chip to PowerVR, and suddenly, any ASTC-compressed 3D texture you load into GPU memory loads the blocks into incorrect regions of the texture's memory. In that case, you'll need to either:
 
-a) decompress the ASTC in software and initialize the texture as something like RGBA8 UNORM, forcing you to increase startup times and forfeiting the savings you budgeted for when using ASTC for (typically quite large) volumetric textures.
+a) decompress the ASTC in software and initialize the texture as something like RGBA8 UNORM, forcing you to increase startup times and forfeiting the savings you budgeted for when using ASTC for volumetric textures which are typically relatively large, compred to run-of-the-mill standard 2D textures.
 
 b) use 2D texture arrays and load each slice separately. Batteries not included - you'll need to change all of your shaders to sample 2x for every previous sample you had for the 3D texture, and then lerp between them. Not ideal
 
-From what I've tested, Unity opts for a) - If you try to load an ASTC 3D texture into memory, Unity will decompress on the fly and looking in RenderDoc, you'll see that texture as RGBA8_UNORM or similar.
+From what I've tested, Unity opts for **a)**: If you try to load an ASTC 3D texture into memory, Unity will decompress on the fly and looking in RenderDoc, you'll see that texture as RGBA8_UNORM or similar.
 
 -----
 
@@ -44,6 +44,11 @@ In this case, the issue manifested as a total stall of the rendering after frame
 
 Once I figured out what was going on, it was a pretty quick fix. About 20 minutes later and the Sponza scene was visible on my Moto Edge in all its glory! Huzzah!
 
+![The Hyperion game engine running on Android (Motorola Edge 2025)](../img/engine_android_1.jpeg)
+
+(Sky ambient light isn't working here for some reason or another. But that should be a pretty quick fix.)
+
+<!-- ![Hyperion running on Android (portrait)](../img/engine_android_2.jpeg) -->
 -----
 ### Apples to Oranges... Or something
 
@@ -53,3 +58,6 @@ Turns out, my `int main() { Hyp_Initialize(); ... }` was pretty much useless aro
 The solution was to create an `AppDelegate` interface that implemented `UIResponder`, and hand that off to `UIApplicationMain` to do the work, rather than trying to initialize everything up front in `main()` in classic C or C++ fashion.
 
 With that done, we were off the races, driving the flycam around sponza in my demo scene. It looks a bit janky without any baked light, as I built the scene on my Macbook, where I don't have ray tracing shader support. The screen is showing a bit small too, one thing I haven't figured out yet, but hey, it's something at least! Screenshot for proof:
+
+![The Hyperion game engine running on iOS](../img/engine_ios_1.png)
+
