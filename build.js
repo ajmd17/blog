@@ -31,6 +31,10 @@ function parseFrontmatter(content) {
     if (idx > 0) {
       var key = line.slice(0, idx).trim();
       var val = line.slice(idx + 1).trim();
+      if (val.length > 1 && ((val[0] === '"' && val[val.length - 1] === '"') ||
+                             (val[0] === "'" && val[val.length - 1] === "'"))) {
+        val = val.slice(1, -1);
+      }
       data[key] = val;
     }
   });
@@ -44,6 +48,11 @@ function getPreview(html) {
 }
 
 function wrapImages(html) {
+  html = html.replace(/<img src="([^"]+\.(?:mp4|webm|m4v|mov|ogv))" alt="([^"]*)"([^>]*)>/gi,
+    function (match, src, alt, rest) {
+      return '<video src="' + src + '" controls loop muted autoplay playsinline' +
+        (alt ? ' aria-label="' + alt + '"' : '') + rest + '></video>';
+    });
   return html.replace(/<img src="([^"]+)" alt="([^"]*)"(.*?)>/g,
     '<a href="$1" target="_blank"><img src="$1" alt="$2"$3></a>');
 }
@@ -71,6 +80,15 @@ function stripHtml(html) {
   return html.replace(/<[^>]+>/g, '');
 }
 
+function decodeEntities(str) {
+  return str
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
+}
+
 function slugHref(slug) {
   return 'p/' + encodeURIComponent(slug) + '.html';
 }
@@ -87,7 +105,7 @@ function generateArticleHtml(a) {
 }
 
 function generateStaticPage(a, css, template) {
-  var desc = a.description || stripHtml(a.preview).slice(0, 160);
+  var desc = a.description || decodeEntities(stripHtml(a.preview)).slice(0, 160);
   var url = baseUrl + '/' + slugHref(a.slug);
   return template
     .replace(/<!-- TITLE -->/g, esc(a.title))
