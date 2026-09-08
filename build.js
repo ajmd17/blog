@@ -67,6 +67,16 @@ function formatDate(str) {
   return str;
 }
 
+function formatShortDate(str) {
+  if (!str) return '';
+  var parts = str.split('-');
+  if (parts.length === 3) {
+    var d = new Date(+parts[0], +parts[1] - 1, +parts[2]);
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+  return str;
+}
+
 function esc(str) {
   return str
     .replace(/&/g, '&amp;')
@@ -91,6 +101,38 @@ function decodeEntities(str) {
 
 function slugHref(slug) {
   return 'p/' + encodeURIComponent(slug) + '.html';
+}
+
+var mainIndexPath = path.join(__dirname, '..', 'index.html');
+
+function generateLatestPosts(articles) {
+  return articles.slice(0, 3).map(function (a) {
+    return '                        <div class="latest-post">' +
+      '<a class="latest-post-title" href="blog/' + slugHref(a.slug) + '" target="_blank">' + esc(a.title) + '</a>' +
+      (a.date ? '<span class="latest-post-date">' + formatShortDate(a.date) + '</span>' : '') +
+      '</div>';
+  }).join('\n');
+}
+
+function updateMainSite(articles) {
+  if (!fs.existsSync(mainIndexPath)) {
+    console.log('Warning: ' + mainIndexPath + ' not found, skipping main site update.');
+    return;
+  }
+  var mainIndex = fs.readFileSync(mainIndexPath, 'utf-8');
+  var startMarker = '<!-- LATEST_POSTS_START -->';
+  var endMarker = '<!-- LATEST_POSTS_END -->';
+  var start = mainIndex.indexOf(startMarker);
+  var end = mainIndex.indexOf(endMarker);
+  if (start === -1 || end === -1 || end < start) {
+    console.log('Warning: LATEST_POSTS markers not found in ../index.html, skipping main site update.');
+    return;
+  }
+  mainIndex = mainIndex.slice(0, start + startMarker.length) +
+    '\n' + generateLatestPosts(articles) + '\n                        ' +
+    mainIndex.slice(end);
+  fs.writeFileSync(mainIndexPath, mainIndex, 'utf-8');
+  console.log('Updated main index.html with latest posts');
 }
 
 function generateArticleHtml(a) {
@@ -204,4 +246,7 @@ articles.forEach(function (a) {
 // sitemap
 fs.writeFileSync(sitemapFile, generateSitemap(articles), 'utf-8');
 console.log('Generated sitemap.xml');
+
+updateMainSite(articles);
+
 console.log('Done!');
