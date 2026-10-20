@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A Technique for Faster Software Ray Tracing: Bricks - Andrew MacDonald</title>
+  <meta name="description" content="A grid of per-axis column bricks that hold surfaces as planes, traced instead of a BVH, with ray hits cached against the surfaces they leave from.">
+  <meta property="og:title" content="A Technique for Faster Software Ray Tracing: Bricks">
+  <meta property="og:description" content="A grid of per-axis column bricks that hold surfaces as planes, traced instead of a BVH, with ray hits cached against the surfaces they leave from.">
+  <meta property="og:url" content="https://ajmd.dev/blog/p/bricks-experimental-acceleration-structure.html">
+  <meta property="og:type" content="article">
+  <link rel="canonical" href="https://ajmd.dev/blog/p/bricks-experimental-acceleration-structure.html">
+  <style>*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.7;
+  color: #1a1a1a;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  background: #fff;
+}
+
+nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0 0 1rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 0.9rem;
+}
+
+nav a {
+  color: #333;
+  text-decoration: none;
+}
+
+nav a:hover {
+  text-decoration: underline;
+}
+
+nav .title-group h1 {
+  margin: 0 0 5px;
+  font-size: 1.3rem;
+}
+nav .title-group h4 {
+  margin: 0 0 8px;
+  font-weight: normal;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.nav-sep {
+  color: #999;
+  margin: 0 0.4rem;
+}
+
+.nav-current {
+  color: #666;
+}
+
+.nav-link {
+  color: #fff;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  padding: 4px 12px;
+  background: #599ac0;
+  border-radius: 6px;
+  border: 1px solid #58a8d7;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  text-decoration: none;
+}
+
+.nav-link:hover {
+  background: #6aa3c7;
+  border-color: #5a93b7;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+  text-decoration: none;
+}
+
+h1, h2, h3, h4 {
+  line-height: 1.3;
+}
+
+main > h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 1.5rem;
+  color: #333;
+}
+
+.article-card {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  margin-bottom: 2.5rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid #eee;
+  transition: opacity 0.15s;
+}
+
+.article-card:hover {
+  opacity: 0.8;
+}
+
+.article-card article {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.article-card article h2 {
+  margin: 0 0 0.2rem;
+  font-size: 1.4rem;
+  color: #1a1a1a;
+}
+
+.article-card:last-child {
+  border-bottom: none;
+}
+
+.read-more {
+  display: inline-block;
+  margin-top: 0.5rem;
+  color: #7eb8da;
+  font-size: 0.85rem;
+}
+
+.article-card:hover .read-more {
+  color: #0066cc;
+}
+
+time {
+  display: block;
+  color: #888;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.preview p {
+  margin: 0.5rem 0;
+}
+
+/* Full article view */
+
+.full-article .back-to-blog-wrapper {
+  text-align: center;
+  margin: 2.5rem 0 1rem;
+}
+.full-article h1 {
+  margin: 0 0 0.2rem;
+  font-size: 1.8rem;
+}
+
+.full-article .content > h6:first-child {
+  font-size: 0.95rem;
+  font-weight: normal;
+  color: #666;
+  margin: 0 0 1rem;
+  line-height: 1.4;
+}
+
+.full-article .content p {
+  margin: 1rem 0;
+}
+
+.full-article .content h2 {
+  margin-top: 2rem;
+}
+
+.full-article .content h3 {
+  margin-top: 1.5rem;
+}
+
+.full-article .content a:has(img) {
+  display: block;
+  text-decoration: none;
+}
+
+.full-article .content a:has(img):hover img {
+  opacity: 0.85;
+}
+
+.full-article .content img {
+  max-width: 100%;
+  max-height: 550px;
+  height: auto;
+  width: auto;
+  display: block;
+  margin: 1.5rem auto;
+  border-radius: 4px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.15);
+  transition: opacity 0.15s;
+}
+
+.full-article .content video {
+  max-width: 100%;
+  display: block;
+  margin: 1.5rem auto;
+  border-radius: 4px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.15);
+}
+
+.full-article .content pre {
+  background: #f5f5f5;
+  padding: 1rem;
+  overflow-x: auto;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.full-article .content code {
+  background: #f0f0f0;
+  padding: 0.125rem 0.3rem;
+  border-radius: 2px;
+  font-size: 0.9em;
+}
+
+.full-article .content pre code {
+  background: none;
+  padding: 0;
+}
+
+.full-article .content blockquote {
+  margin: 1rem 0;
+  padding: 0 1rem;
+  border-left: 3px solid #ccc;
+  color: #555;
+}
+
+.full-article .content ul, .full-article .content ol {
+  padding-left: 1.5rem;
+}
+
+.full-article .content a {
+  color: #0066cc;
+}
+
+@media (max-width: 500px) {
+  body {
+    padding: 1rem;
+  }
+  article h2 {
+    font-size: 1.2rem;
+  }
+  .full-article h1 {
+    font-size: 1.4rem;
+  }
+}
+</style>
+</head>
+<body>
+    <nav>
+    <div class="title-group">
+      <h1>Life in the Fast Lane</h1>
+      <h4>Graphics Programming and Other Goodness</h4>
+    </div>
+    <a href="/blog/" class="nav-link">Back to blog</a>
+  </nav>
+
+  <main class="full-article">
+    <article>
+      <h1>A Technique for Faster Software Ray Tracing: Bricks</h1>
+      <time>October 20, 2026</time>
+      <div class="content"><h2 id="preface">Preface</h2>
+<p>I have been working on an acceleration structure for software ray tracing of static geometry, as an experiment in finding a faster way to draw world-space reflections of static objects on my poor M1 MacBook Pro.</p>
+<p>In my rendering playground, &quot;Strafe&quot;, I&#39;ve put together some demos of different real-time reflection and GI methods.</p>
+<p>For reflections: SSR, SDF sphere tracing, voxel cone tracing, a hash grid radiance cache, and a few others.</p>
+<p>For GI: surfels, light propagation volumes, PRT, radiance cascades and SDFs. They&#39;re all compared against a path traced reference. This is mainly for learning, experimenting, and figuring out what to pursue.</p>
+<blockquote>
+<p>Disclaimer: A lot of the demos in Strafe are implemented with the help LLMs to help me iterate faster. The logic, techniques and ideas are all coming from me. I&#39;ve pushed hard on optimizing each demo as much as I reasonably could, and while I&#39;m sure there are some missed opportunities here and there, they&#39;re all generally as performant as I could get them without sacrificing visual fidelity.</p>
+</blockquote>
+<p>In some of the research leading to these experiments, I came across some papers: <a href="https://szeliski.org/papers/Shade_LayeredDepthImages_SG98.pdf">Layered Depth Images, Shade et al., &#39;98</a> and <a href="http://www0.cs.ucl.ac.uk/research/vr/Projects/VLF/vlfpapers/ibr/Lischinski_D__Image-Based_Rendering_for_Non-Diffuse_Synthetic_Scenes.pdf">Image-Based Rendering for Non-Diffuse Synthetic Scenes</a>, Lischinski and Rappoport, &#39;98</p>
+<p>I worked some of these ideas into one of my earlier experiments, a &quot;frozen hit cache&quot;: a big GPU hash table of ray hits, keyed by where the ray left from and a bin of directions, and lit every frame from cards around each object. That&#39;s where I landed on the current implementation of &quot;bricks&quot; for reflections.</p>
+<p>I have also experimented with diffuse GI using this technique, but would like to focus on glossy reflections today.</p>
+<h2 id="the-structure">The structure</h2>
+<p>It works by splitting the scene into a grid of cells (say, 2m on a side). Each cell has up to three bricks, one per axis (X, Y, Z), and each brick is split further into a grid of columns running along its axis (32x32 by default, so a column is 6.25cm across).</p>
+<p>You can then take the geometry of the scene and put each triangle in the brick of its normal&#39;s dominant axis, and in no other brick. Wherever it passes through one of that brick&#39;s columns, it creates a &quot;crossing&quot;.</p>
+<p>That gives us a guarantee that within a column, the surface&#39;s depth along the axis changes by at most one column width between the column&#39;s middle and its edge.
+So a surface inside one column can be approximated by a single plane (a depth at the column&#39;s middle plus a normal).</p>
+<p>A crossing is then just two 32-bit words:</p>
+<ul>
+<li>a 16-bit depth and a 16-bit octahedral normal</li>
+<li>a 16-bit, 4x4 mask of which parts of the column the surface covers, and a 16-bit base colour</li>
+</ul>
+<p>All the triangles of one surface in a column (a flat wall made of many triangles, or a bit of something curved) get merged into a single crossing. A column holds up to 8 crossings, sorted nearest first. Each tile of 4x4 columns stores the nearest and furthest depth in it, and a brick with nothing in it costs a single word.</p>
+<p>To reach further out, the cells come in levels, like a clipmap: up to six, each with cells twice the size of the last. The levels follow the camera, and only the cells that come into view get rebuilt, a few per frame.</p>
+<h2 id="how-do-we-trace-it">How do we trace it?</h2>
+<p>A ray goes through three nested walks.</p>
+<ul>
+<li>Cells: A 3D DDA through the cells of a level (whichever is the finest level at that point along the ray). In each cell it visits whichever of the three bricks exist (X, Y or Z).</li>
+<li>Columns: Inside a brick, a 2D DDA across the columns, with the ray&#39;s position along the brick&#39;s axis tracked as it goes.</li>
+<li>Tiles: Before visiting a column, the ray checks its tile. If the tile is empty, or the depths the ray covers inside it miss the tile&#39;s nearest/furthest range, it jumps to the tile&#39;s far edge.</li>
+</ul>
+<p>In a column, the ray intersects each crossing&#39;s plane, and keeps the hit if it lands in a part of the column that the mask says is covered. There&#39;s one small fudge: a plane still counts up to a quarter of a column past its own column. The planes of a curved surface don&#39;t quite meet, and without the fudge a ray can slip between them.</p>
+<p>A hit returns the crossing&#39;s address, its brick and its normal. Nothing gets shaded at the hit, because the light is already there.</p>
+<h2 id="how-we-light-the-scene-with-it">How we light the scene with it</h2>
+<p>Each brick has 8 &quot;cards&quot;: small radiance pictures (with mips) of the light its crossings send on. They&#39;re split by which way the crossings face, and into four layers through the brick&#39;s depth. Cards get relit in the background a few bricks per frame (sun behind a shadow ray, emitters, bounce light), so a full round takes about 8 frames. A hit reads its card where it landed, at a mip as wide as the reflection&#39;s lobe is at that distance, which also blurs rough reflections for free.</p>
+<h2 id="caching-hits">Caching hits</h2>
+<p>Because every crossing has an address, ray hits can be stored against the surface they left from, with no hashing at all. Each crossing owns four &quot;slots&quot;. A slot is the hit of one ray in a bin of directions (the bin size is picked by roughness): the card the ray landed on and how far away it was. No light is stored, so slots never go stale when the lighting changes.</p>
+<p>A pixel finds the crossing it&#39;s on, reads the four slots around its reflected direction, and reads the cards they name. Missing slots get requested (one request per crossing per frame) and traced at the start of the next frame. Neighbouring pixels read neighbouring columns, so it&#39;s all very coherent.</p>
+<p>The GI demo takes this one step further. Each 4x4 tile of every card gets 16 rays traced <em>once</em>, and relighting is just reading the cards those rays landed on. Each round of relighting adds another bounce.</p>
+<hr>
+<h2 id="proscons">Pros/cons</h2>
+<p>Upsides:</p>
+<ul>
+<li>Empty space skipping. Empty bricks are skipped whole, and because each tile stores its min/max depths, we can skip a lot of the time we&#39;d spend marching and cut right to the chase.</li>
+<li>Accurate hits. Inside a column, a hit lands on an actual plane, not a voxel face or an SDF surface, so surfaces don&#39;t come out blocky and thin walls stay thin.</li>
+<li>We can cache a lot, coherently. A hit is stored against the crossing the ray left from, as the card it landed on, so lighting a cached hit is just a texture read.</li>
+</ul>
+<p>Downsides:</p>
+<ul>
+<li>Only static geometry. Moving objects aren&#39;t in the bricks, so they don&#39;t show up in brick rays and don&#39;t cast shadows into the cached light.</li>
+<li>Memory usage. Not <em>too</em> bad compared to, say, a dense SDF volume, since empty space costs a word per brick and the rest grows with surface area rather than volume. But that memory still has to come from somewhere.</li>
+<li>Curved things. Each column only gets a plane, so curved surfaces need the fudge above, and pixels on them often need rays of their own instead of the cache.</li>
+<li>Limits on detail. A column holds at most 8 crossings, and the coverage mask works in quarters of a column (~1.6cm at the finest level, doubling with each level out).</li>
+<li>You still need some way of building the structure. Having an existing BVH to trace against for building it gives the best results. Rasterization works, but with some gaps: anything thinner than a quarter of a column can slip through.</li>
+<li>Mean squared error is higher than other techniques. It looks good, but there are definitely differences compared to the path traced reference.</li>
+</ul>
+<hr>
+<h2 id="comparison-against-other-techniques">Comparison against other techniques</h2>
+<p><a href="../img/bricks-comparison.png" target="_blank"><img src="../img/bricks-comparison.png" alt="Comparison of techniques"></a></p>
+<h3 id="performance-and-relmse">Performance and RelMSE</h3>
+<table>
+<thead>
+<tr>
+<th>Technique</th>
+<th align="right">relMSE @64</th>
+<th align="right">capped @64</th>
+<th align="right">GPU ms</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>IBL</td>
+<td align="right">0.161</td>
+<td align="right">0.161</td>
+<td align="right">0.05</td>
+</tr>
+<tr>
+<td>naive</td>
+<td align="right">1.226</td>
+<td align="right">0.332</td>
+<td align="right">6.56</td>
+</tr>
+<tr>
+<td>SDF</td>
+<td align="right">0.080</td>
+<td align="right">0.030</td>
+<td align="right">1.94</td>
+</tr>
+<tr>
+<td>bricks</td>
+<td align="right">0.224</td>
+<td align="right">0.046</td>
+<td align="right">1.47</td>
+</tr>
+</tbody></table>
+<h3 id="legend">Legend:</h3>
+<table>
+<thead>
+<tr>
+<th>Technique Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ibl</td>
+<td>Split-sum lookup into the prefiltered sky. No rays at all.</td>
+</tr>
+<tr>
+<td>naive</td>
+<td>One GGX VNDF ray per pixel per frame, with no denoising.</td>
+</tr>
+<tr>
+<td>sdf</td>
+<td>Sphere tracing a distance field baked from the static geometry, with hits shaded from a relit radiance volume.</td>
+</tr>
+<tr>
+<td>bricks</td>
+<td>This article.</td>
+</tr>
+</tbody></table>
+<!-- 
+
+## Comparison with Layered Depth Cubes:
+
+| | Layered Depth Cube | Bricks |
+|---|---|---|
+| Surface goes into | all three axes | one axis (dominant normal) |
+| Sample | point | plane + 4x4 coverage mask |
+| Extent | whole scene per LDI | 2m cells, up to 6 levels |
+| Ray walk | each LDI separately, quadtree skip | one cell walk, all axes per cell, tile skip |
+| Lighting | baked into samples | relit cards |
+| Glossy / rough | layered light field gather | card mips |
+| Hit caching | none | slots per crossing per direction bin |
+| Build | offline, CPU ray casting | GPU, incremental | --></div>
+    </article>
+    <div class="back-to-blog-wrapper">
+      <a href="/blog/" class="nav-link">Back to blog</a>
+    </div>
+  </main>
+</body>
+</html>
