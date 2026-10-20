@@ -7,7 +7,7 @@ description: "A grid of per-axis column bricks that hold surfaces as planes, tra
 
 ## Preface
 
-I have been working on an acceleration structure for software ray tracing of static geometry, as an experiment in finding a faster way to draw world-space reflections of static objects on my poor M1 MacBook Pro.
+I have been working on an acceleration structure for software ray tracing of static geometry, as an experiment in finding a faster way to draw world-space reflections of static objects.
 
 In my rendering playground, "Strafe", I've put together some demos of different real-time reflection and GI methods.
 
