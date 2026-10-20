@@ -32,13 +32,13 @@ You can then take the geometry of the scene and put each triangle in the brick o
 That gives us a guarantee that within a column, the surface's depth along the axis changes by at most one column width between the column's middle and its edge.
 So a surface inside one column can be approximated by a single plane (a depth at the column's middle plus a normal).
 
-A crossing is then just two 32-bit words:
-- a 16-bit depth and a 16-bit octahedral normal
-- a 16-bit, 4x4 mask of which parts of the column the surface covers, and a 16-bit base colour
+A crossing can be described using two 32-bit words:
+- a 16-bit depth and a 16-bit octahedral normal.
+- a 16-bit 4x4 mask of which parts of the column the surface covers, and a 16-bit base color.
 
-All the triangles of one surface in a column (a flat wall made of many triangles, or a bit of something curved) get merged into a single crossing. A column holds up to 8 crossings, sorted nearest first. Each tile of 4x4 columns stores the nearest and furthest depth in it, and a brick with nothing in it costs a single word.
+All the triangles of one surface in a column get merged into a single crossing. A column holds up to 8 crossings (sorted nearest first). Each tile of 4x4 columns stores the nearest and furthest depth in it.
 
-To reach further out, the cells come in levels, like a clipmap: up to six, each with cells twice the size of the last. The levels follow the camera, and only the cells that come into view get rebuilt, a few per frame.
+To reach further out, the cells come in levels, like a clipmap. The levels can then follow the camera, and only the cells that come into view get rebuilt.
 
 ## How do we trace it?
 

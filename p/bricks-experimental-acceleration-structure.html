@@ -282,13 +282,13 @@ time {
 <p>You can then take the geometry of the scene and put each triangle in the brick of its normal&#39;s dominant axis, and in no other brick. Wherever it passes through one of that brick&#39;s columns, it creates a &quot;crossing&quot;.</p>
 <p>That gives us a guarantee that within a column, the surface&#39;s depth along the axis changes by at most one column width between the column&#39;s middle and its edge.
 So a surface inside one column can be approximated by a single plane (a depth at the column&#39;s middle plus a normal).</p>
-<p>A crossing is then just two 32-bit words:</p>
+<p>A crossing can be described using two 32-bit words:</p>
 <ul>
-<li>a 16-bit depth and a 16-bit octahedral normal</li>
-<li>a 16-bit, 4x4 mask of which parts of the column the surface covers, and a 16-bit base colour</li>
+<li>a 16-bit depth and a 16-bit octahedral normal.</li>
+<li>a 16-bit 4x4 mask of which parts of the column the surface covers, and a 16-bit base color.</li>
 </ul>
-<p>All the triangles of one surface in a column (a flat wall made of many triangles, or a bit of something curved) get merged into a single crossing. A column holds up to 8 crossings, sorted nearest first. Each tile of 4x4 columns stores the nearest and furthest depth in it, and a brick with nothing in it costs a single word.</p>
-<p>To reach further out, the cells come in levels, like a clipmap: up to six, each with cells twice the size of the last. The levels follow the camera, and only the cells that come into view get rebuilt, a few per frame.</p>
+<p>All the triangles of one surface in a column get merged into a single crossing. A column holds up to 8 crossings (sorted nearest first). Each tile of 4x4 columns stores the nearest and furthest depth in it.</p>
+<p>To reach further out, the cells come in levels, like a clipmap. The levels can then follow the camera, and only the cells that come into view get rebuilt.</p>
 <h2 id="how-do-we-trace-it">How do we trace it?</h2>
 <p>A ray goes through three nested walks.</p>
 <ul>
