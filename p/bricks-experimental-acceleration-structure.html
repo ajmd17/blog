@@ -296,14 +296,14 @@ So a surface inside one column can be approximated by a single plane (a depth at
 <li>Columns: Inside a brick, a 2D DDA across the columns, with the ray&#39;s position along the brick&#39;s axis tracked as it goes.</li>
 <li>Tiles: Before visiting a column, the ray checks its tile. If the tile is empty, or the depths the ray covers inside it miss the tile&#39;s nearest/furthest range, it jumps to the tile&#39;s far edge.</li>
 </ul>
-<p>In a column, the ray intersects each crossing&#39;s plane, and keeps the hit if it lands in a part of the column that the mask says is covered. There&#39;s one small fudge: a plane still counts up to a quarter of a column past its own column. The planes of a curved surface don&#39;t quite meet, and without the fudge a ray can slip between them.</p>
-<p>A hit returns the crossing&#39;s address, its brick and its normal. Nothing gets shaded at the hit, because the light is already there.</p>
+<p>In a column, the ray intersects each crossing&#39;s plane, and keeps the hit if it lands in a part of the column that the mask says is covered. There&#39;s one small fudge: a plane still counts up to a quarter of a column past its own column. The planes of a curved surface don&#39;t quite meet, and without fudging it a bit, a ray can slip between them.</p>
+<p>A hit returns the crossing&#39;s address, its brick and its normal.</p>
 <h2 id="how-we-light-the-scene-with-it">How we light the scene with it</h2>
-<p>Each brick has 8 &quot;cards&quot;: small radiance pictures (with mips) of the light its crossings send on. They&#39;re split by which way the crossings face, and into four layers through the brick&#39;s depth. Cards get relit in the background a few bricks per frame (sun behind a shadow ray, emitters, bounce light), so a full round takes about 8 frames. A hit reads its card where it landed, at a mip as wide as the reflection&#39;s lobe is at that distance, which also blurs rough reflections for free.</p>
+<p>Each brick has 8 &quot;cards&quot;. These cards store radiance, with mips, of the light its crossings send on. They&#39;re split by which way the crossings face, and into four layers through the brick&#39;s depth.</p>
+<p>A hit reads its card where it landed, at a mip as wide as the reflection&#39;s lobe is at that distance, which also blurs rough reflections for free.</p>
 <h2 id="caching-hits">Caching hits</h2>
-<p>Because every crossing has an address, ray hits can be stored against the surface they left from, with no hashing at all. Each crossing owns four &quot;slots&quot;. A slot is the hit of one ray in a bin of directions (the bin size is picked by roughness): the card the ray landed on and how far away it was. No light is stored, so slots never go stale when the lighting changes.</p>
+<p>Because every crossing has an address, ray hits can be stored against the surface they left from, with no hashing at all. Each crossing owns four &quot;slots&quot;. A slot is the hit of one ray in a bin of directions (the bin size is picked by roughness), which gives us the card the ray landed on, and how far away it was.</p>
 <p>A pixel finds the crossing it&#39;s on, reads the four slots around its reflected direction, and reads the cards they name. Missing slots get requested (one request per crossing per frame) and traced at the start of the next frame. Neighbouring pixels read neighbouring columns, so it&#39;s all very coherent.</p>
-<p>The GI demo takes this one step further. Each 4x4 tile of every card gets 16 rays traced <em>once</em>, and relighting is just reading the cards those rays landed on. Each round of relighting adds another bounce.</p>
 <hr>
 <h2 id="proscons">Pros/cons</h2>
 <p>Upsides:</p>

@@ -47,21 +47,21 @@ A ray goes through three nested walks.
 - Columns: Inside a brick, a 2D DDA across the columns, with the ray's position along the brick's axis tracked as it goes.
 - Tiles: Before visiting a column, the ray checks its tile. If the tile is empty, or the depths the ray covers inside it miss the tile's nearest/furthest range, it jumps to the tile's far edge.
 
-In a column, the ray intersects each crossing's plane, and keeps the hit if it lands in a part of the column that the mask says is covered. There's one small fudge: a plane still counts up to a quarter of a column past its own column. The planes of a curved surface don't quite meet, and without the fudge a ray can slip between them.
+In a column, the ray intersects each crossing's plane, and keeps the hit if it lands in a part of the column that the mask says is covered. There's one small fudge: a plane still counts up to a quarter of a column past its own column. The planes of a curved surface don't quite meet, and without fudging it a bit, a ray can slip between them.
 
-A hit returns the crossing's address, its brick and its normal. Nothing gets shaded at the hit, because the light is already there.
+A hit returns the crossing's address, its brick and its normal.
 
 ## How we light the scene with it
 
-Each brick has 8 "cards": small radiance pictures (with mips) of the light its crossings send on. They're split by which way the crossings face, and into four layers through the brick's depth. Cards get relit in the background a few bricks per frame (sun behind a shadow ray, emitters, bounce light), so a full round takes about 8 frames. A hit reads its card where it landed, at a mip as wide as the reflection's lobe is at that distance, which also blurs rough reflections for free.
+Each brick has 8 "cards". These cards store radiance, with mips, of the light its crossings send on. They're split by which way the crossings face, and into four layers through the brick's depth.
+
+A hit reads its card where it landed, at a mip as wide as the reflection's lobe is at that distance, which also blurs rough reflections for free.
 
 ## Caching hits
 
-Because every crossing has an address, ray hits can be stored against the surface they left from, with no hashing at all. Each crossing owns four "slots". A slot is the hit of one ray in a bin of directions (the bin size is picked by roughness): the card the ray landed on and how far away it was. No light is stored, so slots never go stale when the lighting changes.
+Because every crossing has an address, ray hits can be stored against the surface they left from, with no hashing at all. Each crossing owns four "slots". A slot is the hit of one ray in a bin of directions (the bin size is picked by roughness), which gives us the card the ray landed on, and how far away it was.
 
 A pixel finds the crossing it's on, reads the four slots around its reflected direction, and reads the cards they name. Missing slots get requested (one request per crossing per frame) and traced at the start of the next frame. Neighbouring pixels read neighbouring columns, so it's all very coherent.
-
-The GI demo takes this one step further. Each 4x4 tile of every card gets 16 rays traced *once*, and relighting is just reading the cards those rays landed on. Each round of relighting adds another bounce.
 
 -----
 
