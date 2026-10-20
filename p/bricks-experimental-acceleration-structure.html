@@ -325,37 +325,33 @@ So a surface inside one column can be approximated by a single plane (a depth at
 <h2 id="comparison-against-other-techniques">Comparison against other techniques</h2>
 <p><a href="../img/bricks-comparison.png" target="_blank"><img src="../img/bricks-comparison.png" alt="Comparison of techniques"></a></p>
 <h3 id="performance-and-relmse">Performance and RelMSE</h3>
+<p>All samples taken on an RTX 5070 Laptop GPU.</p>
 <table>
 <thead>
 <tr>
-<th>Technique</th>
-<th align="right">relMSE @64</th>
-<th align="right">capped @64</th>
+<th align="right">Technique</th>
+<th align="right">relMSE @ 64</th>
 <th align="right">GPU ms</th>
 </tr>
 </thead>
 <tbody><tr>
-<td>IBL</td>
-<td align="right">0.161</td>
+<td align="right">IBL</td>
 <td align="right">0.161</td>
 <td align="right">0.05</td>
 </tr>
 <tr>
-<td>naive</td>
+<td align="right">naive</td>
 <td align="right">1.226</td>
-<td align="right">0.332</td>
 <td align="right">6.56</td>
 </tr>
 <tr>
-<td>SDF</td>
+<td align="right">SDF</td>
 <td align="right">0.080</td>
-<td align="right">0.030</td>
 <td align="right">1.94</td>
 </tr>
 <tr>
-<td>bricks</td>
+<td align="right">bricks</td>
 <td align="right">0.224</td>
-<td align="right">0.046</td>
 <td align="right">1.47</td>
 </tr>
 </tbody></table>

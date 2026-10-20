@@ -88,12 +88,14 @@ Downsides:
 
 ### Performance and RelMSE
 
-|Technique | relMSE @64	| capped @64	| GPU ms
-|---|---:|---:|---:|
-|IBL	|0.161	|0.161	|0.05
-|naive	|1.226	|0.332	|6.56
-|SDF	|0.080	|0.030	|1.94
-|bricks	|0.224	|0.046	|1.47
+All samples taken on an RTX 5070 Laptop GPU.
+
+|Technique | relMSE @ 64	| GPU ms
+|---:|---:|---:|
+|IBL	|0.161	| 0.05
+|naive	|1.226	| 6.56
+|SDF	|0.080	| 1.94
+|bricks	|0.224	| 1.47
 
 ### Legend:
 
