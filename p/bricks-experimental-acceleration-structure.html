@@ -329,16 +329,17 @@ time {
 <p>I have also experimented with diffuse GI using this technique, but would like to focus on glossy reflections today.</p>
 <h2 id="the-structure">The structure</h2>
 <p>It works by splitting the scene into a grid of cells (say, 2m on a side). Each cell has up to three bricks, one per axis (X, Y, Z), and each brick is split further into a grid of columns running along its axis (32x32 by default, so a column is 6.25cm across).</p>
-<p>You can then take the geometry of the scene and put each triangle in the brick of its normal&#39;s dominant axis, and in no other brick. Wherever it passes through one of that brick&#39;s columns, it creates a &quot;crossing&quot;.</p>
+<p>You can then take the geometry of the scene and put each triangle into the bricks of its normal&#39;s dominant axis only (in every cell it touches, but never into a brick of another axis). Wherever it passes through one of that brick&#39;s columns, it creates a &quot;crossing&quot;.</p>
 <p>That gives us a guarantee that within a column, the surface&#39;s depth along the axis changes by at most one column width between the column&#39;s middle and its edge.
 So a surface inside one column can be approximated by a single plane (a depth at the column&#39;s middle plus a normal).</p>
-<p>A crossing can be described using two 32-bit words:</p>
+<p>A crossing is described by two 32-bit words, which is all the trace has to read:</p>
 <ul>
 <li>a 16-bit depth and a 16-bit octahedral normal.</li>
-<li>a 16-bit 4x4 mask of which parts of the column the surface covers, and a 16-bit base color.</li>
+<li>a 16-bit 4x4 mask of which parts of the column the surface covers, and a 16-bit (RGB565) base color.</li>
 </ul>
-<p>All the triangles of one surface in a column get merged into a single crossing. A column holds up to 8 crossings (sorted nearest first). Each tile of 4x4 columns stores the nearest and furthest depth in it.</p>
-<p>To reach further out, the cells come in levels, like a clipmap. The levels can then follow the camera, and only the cells that come into view get rebuilt.</p>
+<p>Two more words sit off to the side for shading (material, metallic, roughness and a few flags), so a crossing is 16 bytes in all.</p>
+<p>All the triangles of one surface in a column get merged into a single crossing: pieces merge when their depths at the column&#39;s middle are within half a column of each other and their normals are within about 37°. A column holds up to 8 crossings (sorted nearest first). Each tile of 4x4 columns stores the nearest and furthest depth in it.</p>
+<p>To reach further out, the cells come in levels, like a clipmap: up to six, each with cells twice the size of the last. The levels follow the camera, and only the cells that enter a level&#39;s window get rebuilt, 32 cells a frame.</p>
 <h2 id="how-do-we-trace-it">How do we trace it?</h2>
 <p>A ray goes through three nested walks.</p>
 <ul>
@@ -346,16 +347,19 @@ So a surface inside one column can be approximated by a single plane (a depth at
 <li>Columns: Inside a brick, a 2D DDA across the columns, with the ray&#39;s position along the brick&#39;s axis tracked as it goes.</li>
 <li>Tiles: Before visiting a column, the ray checks its tile. If the tile is empty, or the depths the ray covers inside it miss the tile&#39;s nearest/furthest range, it jumps to the tile&#39;s far edge.</li>
 </ul>
-<p>In a column, the ray intersects each crossing&#39;s plane, and keeps the hit if it lands in a part of the column that the mask says is covered. There&#39;s one small fudge: a plane still counts up to a quarter of a column past its own column. The planes of a curved surface don&#39;t quite meet, and without fudging it a bit, a ray can slip between them.</p>
+<p>In a column, the ray intersects each crossing&#39;s plane, and keeps the hit if it lands in a part of the column that the mask says is covered.</p>
+<p>There&#39;s one small fudge needed to make it work because planes of a curved surface don&#39;t quite meet, and without it a ray can slip between them. So a plane still counts up to a quarter of a column past its own column. </p>
 <p>A hit returns the crossing&#39;s address, its brick and its normal.</p>
 <h2 id="how-we-light-the-scene-with-it">How we light the scene with it</h2>
-<p>Each brick has 8 &quot;cards&quot;. These cards store radiance, with mips, of the light its crossings send on. They&#39;re split by which way the crossings face, and into four layers through the brick&#39;s depth.</p>
+<p>Each brick has 8 &quot;cards&quot;. These cards store radiance of the light its crossings send on: one texel per column (32x32), with a full mip chain. They&#39;re split by which way the crossings face, and into four layers through the brick&#39;s depth. Only cards with something on them get a picture.</p>
+<p>Cards are relit in the background, an eighth of the non-empty bricks each frame, so a full round takes 8 frames. Relighting adds up the sun (behind a shadow ray), the emitters, and the diffuse light around it (from the scene&#39;s light probes).</p>
 <p>A hit reads its card where it landed, at a mip as wide as the reflection&#39;s lobe is at that distance, which also blurs rough reflections for free.</p>
 <h2 id="caching-hits">Caching hits</h2>
-<p>Because every crossing has an address, ray hits can be stored against the surface they left from, with no hashing at all. Each crossing owns four &quot;slots&quot;. A slot is the hit of one ray in a bin of directions (the bin size is picked by roughness), which gives us the card the ray landed on, and how far away it was.</p>
-<p>A pixel finds the crossing it&#39;s on, reads the four slots around its reflected direction, and reads the cards they name. Missing slots get requested (one request per crossing per frame) and traced at the start of the next frame. Neighbouring pixels read neighbouring columns, so it&#39;s all very coherent.</p>
+<p>Because every crossing has an address, ray hits can be stored against the surface they left from, with no hashing at all. Directions are split into bins (picked by roughness), and each crossing owns four <em>slots</em> for them. A slot is the hit of one ray in one bin: <code>the card the ray landed on, and how far away it was</code>.</p>
+<p>The four slots hold the 2x2 bins around the direction the crossing reflects the eye in. As the view moves, new bins are requested and the oldest are evicted. A pixel finds the crossing it&#39;s on, reads its slots, and reads the cards they name. Missing slots get requested and traced at the start of the next frame. Neighbouring pixels read neighbouring columns, so it&#39;s all very coherent.</p>
+<p>Not every pixel can be cached. Pixels on curved crossings, pixels whose own reflected direction strays too far from their crossing&#39;s, and pixels with no crossing at all such as moving objects trace rays of their own through the bricks.</p>
 <hr>
-<h2 id="proscons">Pros/cons</h2>
+<h2 id="proscons-of-the-technique-so-far">Pros/cons of the technique, so far.</h2>
 <p>Upsides:</p>
 <ul>
 <li>Empty space skipping. Empty bricks are skipped whole, and because each tile stores its min/max depths, we can skip a lot of the time we&#39;d spend marching and cut right to the chase.</li>
@@ -365,69 +369,188 @@ So a surface inside one column can be approximated by a single plane (a depth at
 <p>Downsides:</p>
 <ul>
 <li>Only static geometry. Moving objects aren&#39;t in the bricks, so they don&#39;t show up in brick rays and don&#39;t cast shadows into the cached light.</li>
-<li>Memory usage. Not <em>too</em> bad compared to, say, a dense SDF volume, since empty space costs a word per brick and the rest grows with surface area rather than volume. But that memory still has to come from somewhere.</li>
-<li>Curved things. Each column only gets a plane, so curved surfaces need the fudge above, and pixels on them often need rays of their own instead of the cache.</li>
-<li>Limits on detail. A column holds at most 8 crossings, and the coverage mask works in quarters of a column (~1.6cm at the finest level, doubling with each level out).</li>
-<li>You still need some way of building the structure. Having an existing BVH to trace against for building it gives the best results. Rasterization works, but with some gaps: anything thinner than a quarter of a column can slip through.</li>
-<li>Mean squared error is higher than other techniques. It looks good, but there are definitely differences compared to the path traced reference.</li>
+<li>Memory usage. Not <em>too</em> bad compared to, say, a dense SDF volume. But that memory still has to come from somewhere.</li>
+<li>Curved surfaces. If you have a scene with a lot of curved surfaces it can quickly eat up frame time. Each column only gets a plane, so curved surfaces need the &#39;fudge&#39; mentioned above, and those pixels need rays of their own instead of being able to use the cache.</li>
+<li>You still need some way of building the structure. Having an existing BVH to trace against for building it gives the best results. Rasterization works, but with some gaps: anything thinner than a quarter of a column can slip through, and rasterized bricks can&#39;t follow the camera.</li>
+<li>Error is higher than the best techniques. It looks good, but there are definitely differences compared to the path traced reference, and a few pixels with large errors push its uncapped relMSE up a lot (see the table below).</li>
 </ul>
 <hr>
 <h2 id="comparison-against-other-techniques">Comparison against other techniques</h2>
-<p><a href="../img/bricks-comparison.png" target="_blank"><img src="../img/bricks-comparison.png" alt="Comparison of techniques"></a></p>
-<h3 id="performance-and-relmse">Performance and RelMSE</h3>
-<p>All samples taken on an RTX 5070 Laptop GPU.</p>
+<p>The same frame for each technique, 64 frames after the camera stopped, with the scene&#39;s own roughness. The first image is <code>filtered</code>, which gets close enough to the path traced reference to stand in for it.</p>
+<p><a href="../img/bricks-cmp-filtered.png" target="_blank"><img src="../img/bricks-cmp-filtered.png" alt="Filtered, 64 frames (reference)"></a></p>
+<p><a href="../img/bricks-cmp-sdf.png" target="_blank"><img src="../img/bricks-cmp-sdf.png" alt="SDF"></a></p>
+<p><a href="../img/bricks-cmp-hashgrid.png" target="_blank"><img src="../img/bricks-cmp-hashgrid.png" alt="Hash grid"></a></p>
+<p><a href="../img/bricks-cmp-vct.png" target="_blank"><img src="../img/bricks-cmp-vct.png" alt="VCT"></a></p>
+<p><a href="../img/bricks-cmp-bricks.png" target="_blank"><img src="../img/bricks-cmp-bricks.png" alt="Bricks"></a></p>
+<h3 id="performance-and-relmse">Performance and relMSE</h3>
+<p>All numbers are at 1600x900 with Vulkan validation off, in the room scene shown above. Lighting includes diffuse GI from light probes.</p>
+<h4 id="rtx-5070-laptop-gpu-windows">RTX 5070 Laptop GPU (Windows)</h4>
 <table>
 <thead>
 <tr>
-<th align="left">Technique</th>
-<th align="right">relMSE @ 64</th>
+<th>Technique</th>
 <th align="right">GPU ms</th>
+<th align="right">GPU MB</th>
+<th align="right">relMSE @1</th>
+<th align="right">@16</th>
+<th align="right">@64</th>
+<th align="right">Bias</th>
+<th align="right">After fly-in @4</th>
+<th align="right">Capped @64</th>
 </tr>
 </thead>
 <tbody><tr>
-<td align="left">ibl</td>
-<td align="right">0.161</td>
-<td align="right">0.05</td>
+<td>filtered (reference)</td>
+<td align="right">7.63</td>
+<td align="right">113</td>
+<td align="right">0.029</td>
+<td align="right">0.008</td>
+<td align="right">0.007</td>
+<td align="right">0.005</td>
+<td align="right">0.033</td>
+<td align="right">0.007</td>
 </tr>
 <tr>
-<td align="left">naive</td>
-<td align="right">1.226</td>
-<td align="right">6.56</td>
+<td>hashgrid</td>
+<td align="right">2.46</td>
+<td align="right">154</td>
+<td align="right">0.017</td>
+<td align="right">0.006</td>
+<td align="right">0.005</td>
+<td align="right">0.005</td>
+<td align="right">0.033</td>
+<td align="right">0.005</td>
 </tr>
 <tr>
-<td align="left">sdf</td>
-<td align="right">0.080</td>
-<td align="right">1.94</td>
+<td>sdf</td>
+<td align="right">1.73</td>
+<td align="right">97</td>
+<td align="right">0.144</td>
+<td align="right">0.127</td>
+<td align="right">0.126</td>
+<td align="right">0.126</td>
+<td align="right">0.118</td>
+<td align="right">0.069</td>
 </tr>
 <tr>
-<td align="left">bricks</td>
-<td align="right">0.224</td>
-<td align="right">1.47</td>
+<td>vct</td>
+<td align="right">1.09</td>
+<td align="right">84</td>
+<td align="right">0.081</td>
+<td align="right">0.081</td>
+<td align="right">0.081</td>
+<td align="right">0.081</td>
+<td align="right">0.081</td>
+<td align="right">0.074</td>
+</tr>
+<tr>
+<td><strong>bricks</strong></td>
+<td align="right">1.44</td>
+<td align="right">34</td>
+<td align="right">0.245</td>
+<td align="right">0.208</td>
+<td align="right">0.207</td>
+<td align="right">0.206</td>
+<td align="right">0.206</td>
+<td align="right">0.035</td>
 </tr>
 </tbody></table>
-<h3 id="legend">Legend:</h3>
+<h4 id="macbook-pro-m1-macos-moltenvk">MacBook Pro M1 (macOS, MoltenVK)</h4>
+<p>The same benchmark with the same settings, on an M1 MacBook Pro (16 GB) through MoltenVK.</p>
 <table>
 <thead>
 <tr>
-<th>Technique Name</th>
+<th>Technique</th>
+<th align="right">GPU ms</th>
+<th align="right">GPU MB</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>filtered (reference)</td>
+<td align="right">69.29</td>
+<td align="right">102</td>
+</tr>
+<tr>
+<td>hashgrid</td>
+<td align="right">24.89</td>
+<td align="right">143</td>
+</tr>
+<tr>
+<td>sdf</td>
+<td align="right">17.47</td>
+<td align="right">105</td>
+</tr>
+<tr>
+<td>vct</td>
+<td align="right">13.73</td>
+<td align="right">105</td>
+</tr>
+<tr>
+<td><strong>bricks</strong></td>
+<td align="right">10.60</td>
+<td align="right">33</td>
+</tr>
+</tbody></table>
+<h3 id="legend-techniques">Legend: techniques</h3>
+<table>
+<thead>
+<tr>
+<th>Technique</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody><tr>
-<td>ibl</td>
-<td>Split-sum lookup into the prefiltered sky. No rays at all.</td>
+<td>filtered</td>
+<td>One GGX VNDF ray per pixel per frame, accumulated over frames in a reprojected history, then an edge-stopping blur whose width follows the reflection&#39;s lobe. Used as the reference here.</td>
 </tr>
 <tr>
-<td>naive</td>
-<td>One GGX VNDF ray per pixel per frame, with no denoising.</td>
+<td>hashgrid</td>
+<td>The same accumulated rays, but hits are shaded from a world-space hash grid that caches sunlight, so most need no shadow ray.</td>
 </tr>
 <tr>
 <td>sdf</td>
 <td>Sphere tracing a distance field baked from the static geometry, with hits shaded from a relit radiance volume.</td>
 </tr>
 <tr>
+<td>vct</td>
+<td>Voxel cone tracing through a camera-centred clipmap of opacity and radiance.</td>
+</tr>
+<tr>
 <td>bricks</td>
 <td>This article.</td>
+</tr>
+</tbody></table>
+<h3 id="legend-columns">Legend: columns</h3>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>What it means</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GPU ms</td>
+<td>Time spent in the technique&#39;s own GPU passes, averaged over the last half of a 64-frame run. Building the bricks isn&#39;t included.</td>
+</tr>
+<tr>
+<td>GPU MB</td>
+<td>GPU memory the technique allocates for itself. Things every technique shares such as the scene&#39;s BVH, textures, the G-buffer aren&#39;t included in this number</td>
+</tr>
+<tr>
+<td>relMSE @N</td>
+<td>Relative mean squared error against the path traced reference, N frames after the technique&#39;s history is reset with the camera held still. Only glossy surfaces (roughness 0.65 or lower) are counted. Lower is better. @1 shows how a technique does with no history at all, @64 once it has settled.</td>
+</tr>
+<tr>
+<td>Bias</td>
+<td>The error of the average of all 64 frames</td>
+</tr>
+<tr>
+<td>After fly-in @4</td>
+<td>The error 4 frames after the camera flies into the view from nearby, rather than starting still. Shows how well a technique reuses its past frames when the camera moves.</td>
+</tr>
+<tr>
+<td>Capped @64</td>
+<td>Same as @64, but with each pixel&#39;s error capped at 10 before averaging. A few fireflies or very wrong pixels can dominate relMSE, so this shows how close the image is overall</td>
 </tr>
 </tbody></table>
 <!-- 
