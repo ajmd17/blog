@@ -38,9 +38,7 @@ A crossing is described by two 32-bit words, which is all the trace has to read:
 
 Two more words sit off to the side for shading (material, metallic, roughness and a few flags), so a crossing is 16 bytes in all.
 
-All the triangles of one surface in a column get merged into a single crossing: pieces merge when their depths at the column's middle are within half a column of each other and their normals are within about 37°. A column holds up to 8 crossings (sorted nearest first). Each tile of 4x4 columns stores the nearest and furthest depth in it.
-
-To reach further out, the cells come in levels, like a clipmap: up to six, each with cells twice the size of the last. The levels follow the camera, and only the cells that enter a level's window get rebuilt, 32 cells a frame.
+All the triangles of one surface in a column get merged into a single crossing. Pieces merge when their depths at the column's middle are within half a column of each other and their normals are within about ~37 degrees of each other. A column can hold up to 8 crossings, sorted nearest first. Each tile of 4x4 columns stores the nearest and furthest depth in it
 
 ## How do we trace it?
 
@@ -57,11 +55,7 @@ A hit returns the crossing's address, its brick and its normal.
 
 ## How we light the scene with it
 
-Each brick has 8 "cards". These cards store radiance of the light its crossings send on: one texel per column (32x32), with a full mip chain. They're split by which way the crossings face, and into four layers through the brick's depth. Only cards with something on them get a picture.
-
-Cards are relit in the background, an eighth of the non-empty bricks each frame, so a full round takes 8 frames. Relighting adds up the sun (behind a shadow ray), the emitters, and the diffuse light around it (from the scene's light probes).
-
-A hit reads its card where it landed, at a mip as wide as the reflection's lobe is at that distance, which also blurs rough reflections for free.
+Each brick has 8 "cards". These cards store radiance of the light its crossings send on with a mip chain. They're split by which way the crossings face, and into four layers through the brick's depth. A hit reads its card where it landed, at a mip as wide as the reflection's lobe is at that distance, so we get rough/glossy reflections.
 
 ## Caching hits
 
@@ -69,7 +63,7 @@ Because every crossing has an address, ray hits can be stored against the surfac
 
 The four slots hold the 2x2 bins around the direction the crossing reflects the eye in. As the view moves, new bins are requested and the oldest are evicted. A pixel finds the crossing it's on, reads its slots, and reads the cards they name. Missing slots get requested and traced at the start of the next frame. Neighbouring pixels read neighbouring columns, so it's all very coherent.
 
-Not every pixel can be cached. Pixels on curved crossings, pixels whose own reflected direction strays too far from their crossing's, and pixels with no crossing at all such as moving objects trace rays of their own through the bricks.
+Note that not every pixel can be cached. Pixels on curved crossings, pixels whose own reflected direction strays too far from their crossing's, and pixels with no crossing at all such as moving objects trace rays of their own through the bricks.
 
 -----
 

@@ -338,8 +338,7 @@ So a surface inside one column can be approximated by a single plane (a depth at
 <li>a 16-bit 4x4 mask of which parts of the column the surface covers, and a 16-bit (RGB565) base color.</li>
 </ul>
 <p>Two more words sit off to the side for shading (material, metallic, roughness and a few flags), so a crossing is 16 bytes in all.</p>
-<p>All the triangles of one surface in a column get merged into a single crossing: pieces merge when their depths at the column&#39;s middle are within half a column of each other and their normals are within about 37°. A column holds up to 8 crossings (sorted nearest first). Each tile of 4x4 columns stores the nearest and furthest depth in it.</p>
-<p>To reach further out, the cells come in levels, like a clipmap: up to six, each with cells twice the size of the last. The levels follow the camera, and only the cells that enter a level&#39;s window get rebuilt, 32 cells a frame.</p>
+<p>All the triangles of one surface in a column get merged into a single crossing. Pieces merge when their depths at the column&#39;s middle are within half a column of each other and their normals are within about ~37 degrees of each other. A column can hold up to 8 crossings, sorted nearest first. Each tile of 4x4 columns stores the nearest and furthest depth in it</p>
 <h2 id="how-do-we-trace-it">How do we trace it?</h2>
 <p>A ray goes through three nested walks.</p>
 <ul>
@@ -351,13 +350,11 @@ So a surface inside one column can be approximated by a single plane (a depth at
 <p>There&#39;s one small fudge needed to make it work because planes of a curved surface don&#39;t quite meet, and without it a ray can slip between them. So a plane still counts up to a quarter of a column past its own column. </p>
 <p>A hit returns the crossing&#39;s address, its brick and its normal.</p>
 <h2 id="how-we-light-the-scene-with-it">How we light the scene with it</h2>
-<p>Each brick has 8 &quot;cards&quot;. These cards store radiance of the light its crossings send on: one texel per column (32x32), with a full mip chain. They&#39;re split by which way the crossings face, and into four layers through the brick&#39;s depth. Only cards with something on them get a picture.</p>
-<p>Cards are relit in the background, an eighth of the non-empty bricks each frame, so a full round takes 8 frames. Relighting adds up the sun (behind a shadow ray), the emitters, and the diffuse light around it (from the scene&#39;s light probes).</p>
-<p>A hit reads its card where it landed, at a mip as wide as the reflection&#39;s lobe is at that distance, which also blurs rough reflections for free.</p>
+<p>Each brick has 8 &quot;cards&quot;. These cards store radiance of the light its crossings send on with a mip chain. They&#39;re split by which way the crossings face, and into four layers through the brick&#39;s depth. A hit reads its card where it landed, at a mip as wide as the reflection&#39;s lobe is at that distance, so we get rough/glossy reflections.</p>
 <h2 id="caching-hits">Caching hits</h2>
 <p>Because every crossing has an address, ray hits can be stored against the surface they left from, with no hashing at all. Directions are split into bins (picked by roughness), and each crossing owns four <em>slots</em> for them. A slot is the hit of one ray in one bin: <code>the card the ray landed on, and how far away it was</code>.</p>
 <p>The four slots hold the 2x2 bins around the direction the crossing reflects the eye in. As the view moves, new bins are requested and the oldest are evicted. A pixel finds the crossing it&#39;s on, reads its slots, and reads the cards they name. Missing slots get requested and traced at the start of the next frame. Neighbouring pixels read neighbouring columns, so it&#39;s all very coherent.</p>
-<p>Not every pixel can be cached. Pixels on curved crossings, pixels whose own reflected direction strays too far from their crossing&#39;s, and pixels with no crossing at all such as moving objects trace rays of their own through the bricks.</p>
+<p>Note that not every pixel can be cached. Pixels on curved crossings, pixels whose own reflected direction strays too far from their crossing&#39;s, and pixels with no crossing at all such as moving objects trace rays of their own through the bricks.</p>
 <hr>
 <h2 id="proscons-of-the-technique-so-far">Pros/cons of the technique, so far.</h2>
 <p>Upsides:</p>
