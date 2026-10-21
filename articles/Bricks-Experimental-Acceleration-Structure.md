@@ -91,7 +91,7 @@ Downsides:
 
 ## Comparison against other techniques
 
-The same frame for each technique, 64 frames after the camera stopped, with the scene's own roughness. The first image is `filtered`, which gets close enough to the path traced reference to stand in for it.
+The same frame for each technique, 64 frames after the camera stopped:
 
 ![Filtered, 64 frames (reference)](../img/bricks-cmp-filtered.png)
 
