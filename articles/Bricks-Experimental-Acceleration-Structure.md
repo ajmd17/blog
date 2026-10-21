@@ -105,7 +105,7 @@ The same frame for each technique, 64 frames after the camera stopped:
 
 ### Performance and relMSE
 
-All numbers are at 1600x900 with Vulkan validation off, in the room scene shown above. Lighting includes diffuse GI from light probes.
+All numbers are at 1600x900, in the room scene shown above. Lighting includes diffuse GI from light probes
 
 #### RTX 5070 Laptop GPU (Windows)
 
