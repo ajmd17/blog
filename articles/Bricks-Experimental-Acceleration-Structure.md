@@ -90,12 +90,12 @@ Downsides:
 
 All samples taken on an RTX 5070 Laptop GPU.
 
-|Technique | relMSE @ 64	| GPU ms
-|---:|---:|---:|
-|IBL	|0.161	| 0.05
-|naive	|1.226	| 6.56
-|SDF	|0.080	| 1.94
-|bricks	|0.224	| 1.47
+| Technique | relMSE @ 64 | GPU ms |
+|:---|---:|---:|
+| ibl | 0.161 | 0.05 |
+| naive | 1.226 | 6.56 |
+| sdf | 0.080 | 1.94 |
+| bricks | 0.224 | 1.47 |
 
 ### Legend:
 
